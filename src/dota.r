@@ -1,11 +1,45 @@
 source("src/mlp.r")
 
+# teams.table = radiant + dire
+
 dota.prepare.data <- function(dataset.path = "dataset/train.csv"){
 
 	dataset = read.csv(dataset.path, header = TRUE)
 
+	# Discard
 	dataset$Start.Date.Time = NULL
 	dataset$Match.Length = NULL
+	dataset$Match.ID = NULL
+	dataset$Series = NULL
+	dataset$League = NULL
+	dataset$Dummy = NULL
+
+	# Normalize time by 1h
+	dataset$Duration.secs = dataset$Duration.secs/3600
+
+	# Dire = 0 Radiant = 1
+	dataset$Winner = as.numeric(dataset$Winner)-1
+
+	# Get Kills difference between teams
+	tmp = strsplit(as.character(dataset$Kills.Score), "-")
+	dataset$Kills = rep(0, length(dataset$Kills.Score))
+	for (i in 1:length(dataset)) {
+		tmp2 = as.numeric(unlist(tmp[i]))
+
+		dataset$Kills[i] = tmp2[1] - tmp2[2]
+	}
+
+	dataset$Kills.Score = NULL
+
+	# Get all player names
+	names = unique(c(
+					unique(unlist(strsplit(levels(dataset$Radiant.Players), ", "))),
+	 				unique(unlist(strsplit(levels(dataset$Dire.Players), ", ")))
+	 				)
+				)
+
+	map = factor(names, levels=(1:length(names)), labels=names)
+	map = factor(names, levels=names, labels=names)
 
 	return (dataset)
 }

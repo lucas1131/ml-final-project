@@ -109,13 +109,16 @@ pca.transform <- function(pca, dataset){
 }
 
 #---------------------------------------------- Dota --------------------------------------------#
-bindfiles <- function(){
-	directory = "Dota/"
-	files = list.files(path = directory, pattern = "*.csv", full.names = TRUE, recursive = FALSE)
+bindfiles <- function(path){
+
+	files = list.files(path = path, pattern = "*.csv", full.names = TRUE, recursive = FALSE)
 	dataset = read.csv(files[[1]], header = TRUE)
-	for(i in 2:length(files)){
-		ds = read.csv(files[[i]], header = TRUE)
-		dataset = rbind (dataset, ds)
+
+	if(length(files) > 1){
+		for(i in 2:length(files)){
+			ds = read.csv(files[[i]], header = TRUE)
+			dataset = rbind (dataset, ds)
+		}
 	}
 	return (dataset)
 }
@@ -123,7 +126,7 @@ bindfiles <- function(){
 retrieve.roles <- function(data.row){
 	dota.roles = c("Carry", "Disabler", "Initiator", "Jungler", "Support", "Durable", "Nuker", "Pusher", "Escape")
 	#roles = unlist( strsplit(data.row[3:12], ",") )
-	roles = (lapply(data.row[3:12], function(x){return(unlist( strsplit(x, ",") ))}))
+	roles = (lapply(data.row[3:12], function(x){ return (unlist( strsplit(x, ",") )) }))
 	#print(roles)
 	mlp.row = rep(0, 20)
 	mlp.row[1] = as.numeric(data.row[[2]])
