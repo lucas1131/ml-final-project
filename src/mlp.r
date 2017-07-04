@@ -114,7 +114,7 @@ mlp.train <- function(mlp, train.input, train.output, step=0.1, threshold=1e-2){
 
 		error = 0
 		t = proc.time()
-		
+
 		for(i in 1:train.input.size){
 
 			# Feed input forward

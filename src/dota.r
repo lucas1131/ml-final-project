@@ -5,7 +5,7 @@ players.table = 0
 
 winner = 0
 
-dota.prepare.data <- function(dataset.path = "dataset/train.csv"){
+dota.prepare.datdota.data <- function(dataset.path = "dataset/train.csv"){
 
 	dataset = read.csv(dataset.path, header = TRUE)
 
@@ -82,44 +82,123 @@ dota.prepare.data <- function(dataset.path = "dataset/train.csv"){
 	return (dataset)
 }
 
-dota.test <- function(mlp, test.path = "dataset/test.csv", validation.path){
+dota.prepare.opendota.data <- function(dataset.path = "dataset/train.csv"){
 
-	testset = as.matrix(dota.prepare.data(test.path))
-	test.validate = as.matrix(read.csv(file=validation.path, header=TRUE))
+	dataset = read.csv(dataset.path, header = TRUE)
+
+	n = nrow(dataset)
+
+	# Discard
+	dataset$match_id = NULL
+
+	# Normalize time by 1h
+	dataset$duration = dataset$duration/3600
+
+	# Dire = 0 Radiant = 1
+	dataset$radiant_win = as.numeric(dataset$radiant_win)-1
+
+	# Get Kills difference between teams
+	dataset$score = dataset$radiant_score - dataset$dire_score
+	dataset$radiant_score = NULL
+	dataset$dire_score = NULL
+
+	# dataset$gold_adv_median = rep(0, n)
+	# dataset$gold_adv_mean = rep(0, n)
+	# dataset$xp_adv_median = rep(0, n)
+	# dataset$xp_adv_mean = rep(0, n)
+
+	# gold = rep(0, n)
+	# xp = rep(0, n)
+
+	# for (i in 1:n) {
+
+	# 	# Gold advantages
+	# 	gold = unlist(strsplit(as.character(dataset[i, "radiant_gold_adv" ]), "\\[|\\]|,"))
+	# 	gold = as.numeric(gold[2:length(gold)])
+		
+	# 	gold.adv.median = (median(gold) > 0)
+	# 	gold.adv.mean = (mean(gold) > 0)
+
+	# 	dataset$gold_adv_median[i] = as.numeric(gold.adv.median)
+	# 	dataset$gold_adv_mean[i] = as.numeric(gold.adv.mean)
+
+	# 	# XP advantages
+	# 	xp = unlist(strsplit(as.character(dataset[i, "radiant_xp_adv" ]), "\\[|\\]|,"))
+	# 	xp = as.numeric(xp[2:length(xp)])
+		
+	# 	xp.adv.median = (median(xp) > 0)
+	# 	xp.adv.mean = (mean(xp) > 0)
+
+	# 	dataset$xp_adv_median[i] = as.numeric(xp.adv.median)
+	# 	dataset$xp_adv_mean[i] = as.numeric(xp.adv.mean)
+	# }
+
+	dataset[is.na.data.frame(dataset)] = 0
+
+	dataset$radiant_gold_adv = NULL
+	dataset$radiant_xp_adv = NULL
+
+	# Extract Winner table for validating
+	winner <<- dataset$radiant_win
+	dataset$radiant_win = NULL
+
+	return (dataset)
+}
+
+dota.prepare.data <- function(dataset.path = "dataset/train.csv", opendota=TRUE){
+
+	if(opendota == TRUE)
+		return (dota.prepare.opendota.data(dataset.path))
+	else 
+		return (dota.prepare.datdota.data(dataset.path))
+}
+
+# dota.test <- function(mlp, test.path = "dataset/test.csv", validation.path){
+dota.test <- function(mlp, testset, winners){
 
 	test.size = nrow(testset)
-	testset.use = testset[, 2:ncol(testset)]
 
 	ret = list()
 	ret$results = rep(0, test.size)
 
 	for(i in 1:test.size){
-		tmp = mlp.forward(mlp, testset.use[i,])
-		ret$results[i] = tmp$f.output # We just want the output
+		ret$results[i] = mlp.forward(mlp, testset[i,])$f.output # We just want the output
 	}
 
-	ret$binary.results = dota.discretize.results(results)
-	ret$accuracy = mlp.accuracy(ret$binary.results, test.validate[,2])
+	ret$binary.results = dota.discretize.results(ret$results)
+	ret$accuracy = mlp.accuracy(ret$binary.results, winners)
+	
 	cat("Accuracy: ", ret$accuracy, "\n")
 
 	return (ret)
 }
 
-dota <- function(dataset.path = "dataset/train.csv", alpha=5, 
-	step=0.4, threshold=1e-1){
+dota <- function(dataset.path = "dataset/train.csv", size=20, 
+	step=0.4, threshold=0.15){
 
 	dataset = as.matrix(dota.prepare.data(dataset.path))
 
-	size = mlp.upper.hidden.size(input.size=ncol(dataset)-1, output.size=1, 
-		n.samples=nrow(dataset), alpha=alpha)
-	mlp = mlp.create(input.size=ncol(dataset)-2, output.size=1, hidden.size=size)
+	# size = mlp.upper.hidden.size(input.size=ncol(dataset)-1, output.size=1, 
+	# 	n.samples=nrow(dataset), alpha=alpha)
+	mlp = mlp.create(input.size=ncol(dataset), output.size=1, hidden.size=size)
 
 	# Randomize dataset for random validation
-	dataset = as.matrix(dataset[sample(nrow(dataset)),])
+	mlp$rand.indexes = sample(nrow(dataset))
 
 	# Use last 10% for validation
-	mlp = mlp.train(mlp, dataset[1:900,2:(ncol(dataset)-1)], as.matrix(winner[1:900]), 
+	# mlp = mlp.train(mlp, dataset[mlp$rand.indexes[1:400],], 
+	# 	as.matrix(winner[ mlp$rand.indexes[1:400] ]), 
+	# 	step=step, threshold=threshold)
+
+	mlp = mlp.train(mlp, dataset[mlp$rand.indexes[1:9000],], 
+		as.matrix(winner[ mlp$rand.indexes[1:9000] ]), 
 		step=step, threshold=threshold)
 
 	return (mlp)
+}
+
+dota.discretize.results <- function(results){ 
+	ret = rep(0, length(results))
+	ret[results >= 0.5] = TRUE
+	return (ret)
 }
