@@ -190,8 +190,8 @@ dota <- function(dataset.path = "dataset/train.csv", size=20,
 	# 	as.matrix(winner[ mlp$rand.indexes[1:400] ]), 
 	# 	step=step, threshold=threshold)
 
-	mlp = mlp.train(mlp, dataset[mlp$rand.indexes[1:9000],], 
-		as.matrix(winner[ mlp$rand.indexes[1:9000] ]), 
+	mlp = mlp.train(mlp, dataset[mlp$rand.indexes[1:13000],], 
+		as.matrix(winner[ mlp$rand.indexes[1:13000] ]), 
 		step=step, threshold=threshold)
 
 	return (mlp)
